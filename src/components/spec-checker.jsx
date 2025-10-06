@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useState, useEffect } from "react"
 import LoadingSpinner from "./loading-spinner"
 import SpecCompare from "./spec-compare"
 import { cn } from "../lib/utils"
@@ -45,17 +45,14 @@ export default function SpecChecker() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
 
-  const userSpecs = useMemo(
-    () => ({
-      cpu: "Intel Core i7-9750H",
-      gpu: "NVIDIA GTX 1660 Ti",
-      ramGB: 16,
-      storageGB: 200,
-      os: "Windows 11",
-      dxVersion: "12",
-    }),
-    [],
-  )
+  const [userSpecs, setUserSpecs] = useState({
+    cpu: null,
+    gpu: null,
+    ramGB: null,
+    storageGB: null,
+    os: null,
+    dxVersion: "12",
+  });
 
   const handleSearch = useCallback(async () => {
     if (!query.trim()) return
@@ -103,6 +100,27 @@ export default function SpecChecker() {
     }
     setLoading(false)
   }, [query])
+
+  useEffect(() => {
+    const fetchSpecs = async () => {
+      try {
+        const specs = await invoke("get_user_system_specs");
+
+        setUserSpecs({
+          cpu: specs.cpu_brand ?? null,
+          gpu: specs.gpu ?? null,
+          ramGB: specs.total_ram_gb ?? null,
+          storageGB: specs.total_storage_gb ?? null,
+          os: specs.os ?? null,
+          dxVersion: "12", // placeholder
+        });
+      } catch (err) {
+        console.error("Failed to fetch system specs:", err);
+      }
+    };
+
+    fetchSpecs();
+  }, []);
 
   return (
     <section className="space-y-6">

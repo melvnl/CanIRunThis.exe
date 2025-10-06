@@ -1,6 +1,69 @@
 use std::fs;
 // use tauri::async_runtime::spawn;
 use regex::Regex;
+use sysinfo::{System, Disks};
+use std::process::Command;
+use serde_json::json;
+
+#[tauri::command]
+fn get_user_system_specs() -> serde_json::Value {
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    // CPU
+    let cpu_brand = sys.cpus().first().map(|c| c.brand().to_string());
+    let cpu_count = sys.cpus().len();
+
+    // RAM
+    let total_ram_gb = sys.total_memory() / 1024 / 1024 / 1024;
+
+    // Storage (sum of all disks)
+    let disks = Disks::new_with_refreshed_list();
+    let total_storage_gb: u64 = disks.iter()
+        .map(|d| d.total_space())
+        .sum::<u64>() / 1_000_000_000;
+
+    // GPU (platform-specific)
+    #[cfg(target_os = "windows")]
+    let gpu_name = {
+        let output = Command::new("wmic")
+            .args(&["path", "win32_VideoController", "get", "Name"])
+            .output();
+        output.ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| s.lines().skip(1).filter(|l| !l.trim().is_empty()).collect::<Vec<_>>().join(", "))
+    };
+
+    #[cfg(target_os = "macos")]
+    let gpu_name = {
+        let output = Command::new("system_profiler")
+            .arg("SPDisplaysDataType")
+            .output();
+        output.ok()
+            .and_then(|o| String::from_utf8(o.stdout).ok())
+            .map(|s| {
+                s.lines()
+                    .filter(|line| line.trim().starts_with("Chipset Model"))
+                    .map(|line| line.trim().replace("Chipset Model: ", ""))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            })
+    };
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let gpu_name = None;
+
+    json!({
+        "os": System::name(),
+        "os_version": System::os_version(),
+        "hostname": System::host_name(),
+        "cpu_brand": cpu_brand,
+        "cpu_count": cpu_count,
+        "gpu": gpu_name,
+        "total_storage_gb": total_storage_gb,
+        "total_ram_gb": total_ram_gb,
+    })
+}
 
 #[tauri::command]
 async fn steam_app_details(appid: String) -> Result<serde_json::Value, String> {
@@ -104,7 +167,7 @@ pub fn run() {
       }
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![steam_app_details, search_local_game, update_game_cache_now])
+    .invoke_handler(tauri::generate_handler![get_user_system_specs, steam_app_details, search_local_game, update_game_cache_now])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
