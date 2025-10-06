@@ -7,26 +7,28 @@ function extractModelScore(s) {
 }
 
 function dxMeets(userDx, minDx) {
-  const u = Number.parseInt(userDx.replace(/[^\d]/g, ""), 10)
-  const m = Number.parseInt(minDx.replace(/[^\d]/g, ""), 10)
-  if (Number.isNaN(u) || Number.isNaN(m)) return "unknown"
-  return u >= m ? "pass" : "fail"
+  if (!userDx || !minDx) return "unknown";
+  const u = Number.parseInt(userDx.replace(/[^\d]/g, ""), 10);
+  const m = Number.parseInt(minDx.replace(/[^\d]/g, ""), 10);
+  if (Number.isNaN(u) || Number.isNaN(m)) return "unknown";
+  return u >= m ? "pass" : "fail";
 }
 
 function osMeets(userOS, minOS) {
-  const u = userOS.toLowerCase()
-  const m = minOS.toLowerCase()
-  const has = (kw) => u.includes(kw)
-  const minHas = (kw) => m.includes(kw)
+  if (!userOS || !minOS) return "unknown";
+  const u = userOS.toLowerCase();
+  const m = minOS.toLowerCase();
+  const has = (kw) => u.includes(kw);
+  const minHas = (kw) => m.includes(kw);
 
   if (minHas("windows 10/11")) {
-    return has("windows 10") || has("windows 11") ? "pass" : "fail"
+    return has("windows 10") || has("windows 11") ? "pass" : "fail";
   }
   if (minHas("windows 11")) {
-    return has("windows 11") ? "pass" : "fail"
+    return has("windows 11") ? "pass" : "fail";
   }
   if (minHas("windows 10")) {
-    return has("windows 10") || has("windows 11") ? "pass" : "fail"
+    return has("windows 10") || has("windows 11") ? "pass" : "fail";
   }
 
   return u.includes(m) ? "pass" : "unknown"
@@ -101,7 +103,7 @@ function statusIcon(status) {
 }
 
 
-export default function SpecCompare({ user, minimum, recommended, gameTitle }) {
+export default function SpecCompare({ user, minimum, recommended, gameTitle, thumbnail, publishers, developers, platforms, releaseDate }) {
   const cpuStatus = modelMeets(user.cpu, minimum.cpu)
   const gpuStatus = modelMeets(user.gpu, minimum.gpu)
   const ramStatus = numericMeets(`${user.ramGB}`, `${minimum.ramGB}`)
@@ -111,9 +113,46 @@ export default function SpecCompare({ user, minimum, recommended, gameTitle }) {
 
   return (
     <SimpleCard
-      title={<span className="text-pretty">{gameTitle} — Requirements vs Your PC</span>}
+      title={
+        <span className="flex gap-2 items-center text-pretty">
+          {thumbnail && (
+            <img
+              src={thumbnail}
+              alt="Game thumbnail"
+              className="w-16 h-16 object-cover rounded shadow border border-gray-200"
+              style={{ minWidth: 48, minHeight: 48 }}
+            />
+          )}
+          <span>{gameTitle} — Requirements vs Your PC</span>
+        </span>
+      }
       contentClassName="overflow-x-auto"
     >
+
+      {/* Game Info Section */}
+      <div className="mb-4 grid grid-cols-2 grid-rows-2 gap-2 text-sm mb-8">
+        {/* Platforms */}
+        <div className="flex items-center gap-1">
+          <span className="font-medium">Platforms:</span>
+          {platforms?.windows && <span title="Windows">Windows</span>}
+          {platforms?.mac && <span title="Mac">MacOS</span>}
+          {platforms?.linux && <span title="Linux">Linux</span>}
+        </div>
+        {/* Developers */}
+        <div>
+          <span className="font-medium">Developers:</span> {developers?.join(', ')}
+        </div>
+        {/* Publishers */}
+        <div>
+          <span className="font-medium">Publishers:</span> {publishers?.join(', ')}
+        </div>
+        {/* Release Date */}
+        <div>
+          <span className="font-medium">Release Date:</span> {releaseDate?.date || "Unknown"}
+        </div>
+      </div>
+
+      {/* Requirements Table */}
       <table className="w-full border-collapse rounded-md">
         <thead>
           <tr className="text-left text-sm text-muted-foreground">

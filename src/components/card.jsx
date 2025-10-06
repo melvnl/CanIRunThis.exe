@@ -25,7 +25,7 @@ function SimpleCard({
         <div
           data-slot="card-header"
           className={cn(
-            "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 pb-6",
+            "grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6",
             headerClassName
           )}
         >

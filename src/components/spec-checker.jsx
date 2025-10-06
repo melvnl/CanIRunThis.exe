@@ -7,46 +7,36 @@ import { cn } from "../lib/utils"
 import { Input } from "./input"
 import { SimpleCard } from "./card"
 import { Button } from "./button"
+import { invoke } from '@tauri-apps/api/core';
 
-const GAME_DB = {
-  "elden ring": {
-    title: "ELDEN RING",
-    minimum: {
-      cpu: "Intel Core i5-8400 / Ryzen 3 3300X",
-      gpu: "NVIDIA GTX 1060 3GB / AMD RX 580 4GB",
-      ramGB: 12,
-      storageGB: 60,
-      os: "Windows 10",
-      dxVersion: "12",
-    },
-    recommended: {
-      cpu: "Intel Core i7-8700K / Ryzen 5 3600X",
-      gpu: "NVIDIA RTX 2060 / AMD RX 5700 XT",
-      ramGB: 16,
-      storageGB: 60,
-      os: "Windows 10/11",
-      dxVersion: "12",
-    },
-  },
-  "baldurs gate 3": {
-    title: "Baldur's Gate 3",
-    minimum: {
-      cpu: "Intel i5-4690 / AMD FX 8350",
-      gpu: "NVIDIA GTX 970 / AMD RX 480",
-      ramGB: 8,
-      storageGB: 150,
-      os: "Windows 10",
-      dxVersion: "11",
-    },
-    recommended: {
-      cpu: "Intel i7-8700K / AMD Ryzen 5 3600",
-      gpu: "NVIDIA RTX 2060 Super / AMD RX 5700 XT",
-      ramGB: 16,
-      storageGB: 150,
-      os: "Windows 10/11",
-      dxVersion: "12",
-    },
-  },
+function parseRequirements(html) {
+  if (!html) return {};
+  // Remove tags and split by line
+  const text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
+  const lines = text.split(/\n|\r/).map(l => l.trim()).filter(Boolean);
+  const req = {};
+  lines.forEach(line => {
+    if (/^OS:/i.test(line)) req.os = line.replace(/^OS:/i, '').trim();
+    if (/^Processor:/i.test(line)) req.cpu = line.replace(/^Processor:/i, '').trim();
+    if (/^Memory:/i.test(line)) req.ramGB = line.replace(/^Memory:/i, '').replace(/GB.*$/, '').trim();
+    if (/^Graphics:/i.test(line)) req.gpu = line.replace(/^Graphics:/i, '').trim();
+    if (/^DirectX:/i.test(line)) req.dxVersion = line.replace(/^DirectX:/i, '').replace(/Version/i, '').trim();
+    if (/^Storage:/i.test(line)) req.storageGB = line.replace(/^Storage:/i, '').replace(/GB.*$/, '').trim();
+  });
+  // Convert ramGB and storageGB to numbers if possible
+  if (req.ramGB) req.ramGB = Number(req.ramGB.replace(/[^\d.]/g, ""));
+  if (req.storageGB) req.storageGB = Number(req.storageGB.replace(/[^\d.]/g, ""));
+  return req;
+}
+
+function ErrorPage({ error }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+      <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+      <p className="text-base text-gray-700 mb-2">{error}</p>
+      <p className="text-sm text-gray-400">Please try again or check your internet connection.</p>
+    </div>
+  );
 }
 
 export default function SpecChecker() {
@@ -73,17 +63,44 @@ export default function SpecChecker() {
     setError(null)
     setResult(null)
 
-    await new Promise((r) => setTimeout(r, 700))
-
-    const key = query.trim().toLowerCase()
-    const found = GAME_DB[key]
-    if (!found) {
-      setError("Game not found in demo database. Try “Elden Ring” or “Baldurs Gate 3”.")
-      setLoading(false)
-      return
+    try {
+      // Find closest match in local cache
+      const appid = await invoke('search_local_game', { query: query.trim() })
+      if (!appid) {
+        setError("No matching game found in local cache.")
+        setLoading(false)
+        return
+      }
+      // Fetch game details from Steam
+      const detailsResp = await invoke('steam_app_details', { appid: String(appid) })
+      const detailsObj = detailsResp[String(appid)]
+      if (!detailsObj || !detailsObj.success || !detailsObj.data) {
+        setError("Steam API failed to return game details. Please try again later.")
+        setLoading(false)
+        return
+      }
+      const details = detailsObj.data
+      if (!details || !details.name) {
+        setError("Could not fetch game details from Steam.")
+        setLoading(false)
+        return
+      }
+      // Parse requirements if available
+      let minimum = {}, recommended = {}
+      let thumbnail = details.header_image || null
+      let publishers = details.publishers || []
+      let developers = details.developers || []
+      let platforms = details.platforms || {}
+      let releaseDate = details.release_date || {}
+      if (details.pc_requirements) {
+        minimum = parseRequirements(details.pc_requirements.minimum)
+        recommended = parseRequirements(details.pc_requirements.recommended)
+      }
+      setResult({ title: details.name, minimum, recommended, thumbnail, publishers, developers, platforms, releaseDate })
+    } catch (e) {
+      console.log(e)
+      setError("Failed to fetch game details. Please check your connection or try again later.")
     }
-
-    setResult({ title: found.title, minimum: found.minimum, recommended: found.recommended })
     setLoading(false)
   }, [query])
 
@@ -128,8 +145,11 @@ export default function SpecChecker() {
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </SimpleCard>
 
+      {/* Error Page */}
+      {error && <ErrorPage error={error} />}
+
       {/* Loading State */}
-      {loading && (
+      {!error && loading && (
         <div className="flex items-center justify-center py-10">
           <div className="inline-flex items-center gap-3">
             <LoadingSpinner size={24} />
@@ -139,12 +159,17 @@ export default function SpecChecker() {
       )}
 
       {/* Result */}
-      {result && (
+      {!error && result && (
         <SpecCompare
           user={userSpecs}
           minimum={result.minimum}
           recommended={result.recommended}
           gameTitle={result.title}
+          thumbnail={result.thumbnail}
+          publishers={result.publishers}
+          developers={result.developers}
+          platforms={result.platforms}
+          releaseDate={result.releaseDate}
         />
       )}
     </section>
