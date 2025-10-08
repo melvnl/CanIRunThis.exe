@@ -1,4 +1,24 @@
+import macCPUs from "../benchmark_data/mac/cpus.json"
+import macGPUs from "../benchmark_data/mac/gpus.json"
+
 import { SimpleCard } from "./card"
+
+function fuzzyFindScore(modelName, cpuData) {
+  if (!modelName) return null
+  const lowerName = modelName.toLowerCase()
+
+  const match = Object.keys(cpuData).find(cpuKey => {
+    const key = cpuKey.toLowerCase()
+    return (
+      key.includes(lowerName) ||
+      lowerName.includes(key) ||
+      key.replace(/\s+/g, "").includes(lowerName.replace(/\s+/g, ""))
+    )
+  })
+
+  return match ? cpuData[match] : null
+}
+
 
 function extractModelScore(s) {
   const matches = Array.from(s.toLowerCase().matchAll(/(\d{3,5})(?!\s*gb)/g)).map((m) => Number(m[1]))
@@ -75,14 +95,41 @@ function osMeets(userOS, minOS) {
   return u.includes(m) ? "pass" : "unknown";
 }
 
+function modelMeets(userOs, type, userVal, minVal) {
+  const options = (minVal || "")
+    .split("/")
+    .map(s => s.trim())
+    .filter(Boolean)
 
-function modelMeets(userVal, minVal) {
-  const options = (minVal || "").split("/").map((s) => s.trim()).filter(Boolean)
+  // --- macOS special handling ---
+  if (userOs == "Darwin") {
+    const u = userVal.toLowerCase()
+
+    // Rule #1: Apple Silicon always beats Intel/AMD
+    if (/(apple|m1|m2|m3|m4)/.test(u)) {
+      const weaker = options.some(opt =>
+        /(intel|amd|quad|hd|core)/i.test(opt)
+      )
+      if (weaker) return "pass"
+    }
+
+    // Rule #2: Fuzzy match fallback
+    var source = type === "cpu" ? macCPUs : macGPUs
+    const userScore = fuzzyFindScore(userVal, source)
+    const optScores = options
+      .map(o => fuzzyFindScore(o, source))
+      .filter(s => s != null)
+
+    if (userScore == null || optScores.length === 0) return "unknown"
+    const meetsAny = optScores.some(s => userScore >= s)
+    return meetsAny ? "pass" : "fail"
+  }
+
+  // --- fallback for other OS ---
   const userScore = extractModelScore(userVal)
-  const optScores = options.map((o) => extractModelScore(o)).filter((n) => n !== null)
-
+  const optScores = options.map(o => extractModelScore(o)).filter(n => n !== null)
   if (userScore == null || optScores.length === 0) return "unknown"
-  const meetsAny = optScores.some((s) => userScore >= s)
+  const meetsAny = optScores.some(s => userScore >= s)
   return meetsAny ? "pass" : "fail"
 }
 
@@ -146,8 +193,8 @@ function statusIcon(status) {
 
 
 export default function SpecCompare({ user, minimum, recommended, gameTitle, thumbnail, publishers, developers, platforms, releaseDate }) {
-  const cpuStatus = modelMeets(user.cpu, minimum.cpu)
-  const gpuStatus = modelMeets(user.gpu, minimum.gpu)
+  const cpuStatus = modelMeets(user.os, 'cpu', user.cpu, minimum.cpu,)
+  const gpuStatus = modelMeets(user.os, 'gpu', user.gpu, minimum.gpu)
   const ramStatus = numericMeets(`${user.ramGB}`, `${minimum.ramGB}`)
   const storageStatus = numericMeets(`${user.storageGB}`, `${minimum.storageGB}`)
   const osStatus = osMeets(user.os, minimum.os)
