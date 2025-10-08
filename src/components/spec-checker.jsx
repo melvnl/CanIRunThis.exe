@@ -1,5 +1,3 @@
-"use client"
-
 import { useCallback, useState, useEffect } from "react"
 import LoadingSpinner from "./loading-spinner"
 import SpecCompare from "./spec-compare"
@@ -44,6 +42,7 @@ export default function SpecChecker() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [osWarning, setOsWarning] = useState(null)
 
   const [userSpecs, setUserSpecs] = useState({
     cpu: null,
@@ -59,6 +58,7 @@ export default function SpecChecker() {
     setLoading(true)
     setError(null)
     setResult(null)
+    setOsWarning(null)
 
     try {
       // Find closest match in local cache
@@ -68,6 +68,7 @@ export default function SpecChecker() {
         setLoading(false)
         return
       }
+
       // Fetch game details from Steam
       const detailsResp = await invoke('steam_app_details', { appid: String(appid) })
       const detailsObj = detailsResp[String(appid)]
@@ -76,30 +77,69 @@ export default function SpecChecker() {
         setLoading(false)
         return
       }
+
       const details = detailsObj.data
       if (!details || !details.name) {
         setError("Could not fetch game details from Steam.")
         setLoading(false)
         return
       }
-      // Parse requirements if available
+
+      // Extract core info
       let minimum = {}, recommended = {}
-      let thumbnail = details.header_image || null
-      let publishers = details.publishers || []
-      let developers = details.developers || []
-      let platforms = details.platforms || {}
-      let releaseDate = details.release_date || {}
-      if (details.pc_requirements) {
-        minimum = parseRequirements(details.pc_requirements.minimum)
-        recommended = parseRequirements(details.pc_requirements.recommended)
+      const thumbnail = details.header_image || null
+      const publishers = details.publishers || []
+      const developers = details.developers || []
+      const platforms = details.platforms || {}
+      const releaseDate = details.release_date || {}
+
+      // 🧭 Determine OS mapping
+      const osMap = {
+        Windows_NT: "windows",
+        Darwin: "mac",
+        Linux: "linux",
       }
-      setResult({ title: details.name, minimum, recommended, thumbnail, publishers, developers, platforms, releaseDate })
+      const userOsKey = osMap[userSpecs.os] || null
+
+      // ⚠️ OS compatibility check
+      if (userOsKey && platforms[userOsKey] === false) {
+        setOsWarning(`Your Operating System (${userSpecs.os}) is not compatible with this game.`)
+      } else {
+        setOsWarning(null)
+      }
+
+      // 🧩 Pick correct requirement section
+      let osRequirements = null
+      if (userOsKey === "windows") {
+        osRequirements = details.pc_requirements
+      } else if (userOsKey === "mac") {
+        osRequirements = details.mac_requirements
+      } else if (userOsKey === "linux") {
+        osRequirements = details.linux_requirements
+      }
+
+      if (osRequirements) {
+        minimum = parseRequirements(osRequirements.minimum)
+        recommended = parseRequirements(osRequirements.recommended)
+      }
+
+      setResult({
+        title: details.name,
+        minimum,
+        recommended,
+        thumbnail,
+        publishers,
+        developers,
+        platforms,
+        releaseDate,
+      })
     } catch (e) {
       console.log(e)
       setError("Failed to fetch game details. Please check your connection or try again later.")
     }
+
     setLoading(false)
-  }, [query])
+  }, [query, userSpecs])
 
   useEffect(() => {
     const fetchSpecs = async () => {
@@ -178,17 +218,25 @@ export default function SpecChecker() {
 
       {/* Result */}
       {!error && result && (
-        <SpecCompare
-          user={userSpecs}
-          minimum={result.minimum}
-          recommended={result.recommended}
-          gameTitle={result.title}
-          thumbnail={result.thumbnail}
-          publishers={result.publishers}
-          developers={result.developers}
-          platforms={result.platforms}
-          releaseDate={result.releaseDate}
-        />
+        <>
+          {osWarning ? (
+            <p className="text-center text-red-600 font-medium">
+              {osWarning}
+            </p>
+          ) : (
+            <SpecCompare
+              user={userSpecs}
+              minimum={result.minimum}
+              recommended={result.recommended}
+              gameTitle={result.title}
+              thumbnail={result.thumbnail}
+              publishers={result.publishers}
+              developers={result.developers}
+              platforms={result.platforms}
+              releaseDate={result.releaseDate}
+            />
+          )}
+        </>
       )}
     </section>
   )

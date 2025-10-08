@@ -21,6 +21,7 @@ function osMeets(userOS, minOS) {
   const has = (kw) => u.includes(kw);
   const minHas = (kw) => m.includes(kw);
 
+  // ✅ Windows handling
   if (minHas("windows 10/11")) {
     return has("windows 10") || has("windows 11") ? "pass" : "fail";
   }
@@ -30,12 +31,53 @@ function osMeets(userOS, minOS) {
   if (minHas("windows 10")) {
     return has("windows 10") || has("windows 11") ? "pass" : "fail";
   }
+  if (minHas("windows 7") || minHas("windows 8")) {
+    return has("windows") ? "pass" : "fail";
+  }
 
-  return u.includes(m) ? "pass" : "unknown"
+  // ✅ macOS handling
+  if (minHas("macos")) {
+    // Extract version number from string, e.g. "macOS 12 or newer" → 12
+    const match = m.match(/macos\s*(\d+(\.\d+)?)/);
+    const minVersion = match ? parseFloat(match[1]) : null;
+
+    // macOS internal Darwin mapping (approximate)
+    const darwinToMac = {
+      23: 14, // macOS 14 Sonoma
+      22: 13, // macOS 13 Ventura
+      21: 12, // macOS 12 Monterey
+      20: 11, // macOS 11 Big Sur
+      19: 10.15, // macOS Catalina
+      18: 10.14, // Mojave
+      17: 10.13, // High Sierra
+      16: 10.12, // Sierra
+    };
+
+    // Extract Darwin version if possible (e.g. "Darwin 23.5.0" → 23)
+    const darwinMatch = u.match(/darwin\s*(\d+)/);
+    const userDarwin = darwinMatch ? parseInt(darwinMatch[1]) : null;
+    const userMacVersion = userDarwin ? darwinToMac[userDarwin] : null;
+
+    if (userMacVersion && minVersion) {
+      return userMacVersion >= minVersion ? "pass" : "fail";
+    }
+
+    // fallback
+    return has("darwin") || has("macos") ? "pass" : "fail";
+  }
+
+  // ✅ Linux handling
+  if (minHas("linux") || has("linux")) {
+    return "pass"; // Most Linux distros aren't version-gated in Steam requirements
+  }
+
+  // fallback generic match
+  return u.includes(m) ? "pass" : "unknown";
 }
 
+
 function modelMeets(userVal, minVal) {
-  const options = minVal.split("/").map((s) => s.trim())
+  const options = (minVal || "").split("/").map((s) => s.trim()).filter(Boolean)
   const userScore = extractModelScore(userVal)
   const optScores = options.map((o) => extractModelScore(o)).filter((n) => n !== null)
 
@@ -130,7 +172,7 @@ export default function SpecCompare({ user, minimum, recommended, gameTitle, thu
     >
 
       {/* Game Info Section */}
-      <div className="mb-4 grid grid-cols-2 grid-rows-2 gap-2 text-sm mb-8">
+      <div className="grid grid-cols-2 grid-rows-2 gap-2 text-sm mb-8">
         {/* Platforms */}
         <div className="flex items-center gap-1">
           <span className="font-medium">Platforms:</span>
