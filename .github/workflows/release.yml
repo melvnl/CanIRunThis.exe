@@ -25,10 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v0.5.10
         with:
           projectPath: .
           tagName: ${{ github.ref_name }}
           releaseName: "GameSpec ${{ github.ref_name }}"
           releaseBody: "Cross-platform build"
-          token: ${{ secrets.GITHUB_TOKEN }}
