@@ -31,3 +31,4 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "GameSpec ${{ github.ref_name }}"
           releaseBody: "Cross-platform build"
+          token: ${{ secrets.GITHUB_TOKEN }}
