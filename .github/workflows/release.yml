@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v4
@@ -31,5 +31,5 @@ jobs:
         with:
           projectPath: .
           tagName: ${{ github.ref_name }}
-          releaseName: "GameSpec ${{ github.ref_name }}"
+          releaseName: "Can I Run This ${{ github.ref_name }}"
           releaseBody: "Cross-platform build"
