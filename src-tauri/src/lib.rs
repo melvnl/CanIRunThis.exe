@@ -168,6 +168,7 @@ pub fn run() {
       Ok(())
     })
     .invoke_handler(tauri::generate_handler![get_user_system_specs, steam_app_details, search_local_game, update_game_cache_now])
+    .plugin(tauri_plugin_http::init())
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
