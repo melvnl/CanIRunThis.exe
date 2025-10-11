@@ -1,6 +1,6 @@
 name: "Build & Publish Tauri App"
 on:
-  workflow_dispatch: # allows manual trigger
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -27,6 +27,7 @@ jobs:
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         with:
+          projectPath: .
           tagName: ${{ github.ref_name }}
           releaseName: "GameSpec ${{ github.ref_name }}"
           releaseBody: "Cross-platform build"
