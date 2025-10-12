@@ -8,24 +8,71 @@ import { Button } from "./button"
 import { invoke } from '@tauri-apps/api/core';
 
 function parseRequirements(html) {
-  if (!html) return {};
-  // Remove tags and split by line
-  const text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "");
-  const lines = text.split(/\n|\r/).map(l => l.trim()).filter(Boolean);
+  if (!html) {
+    return {
+      os: "-",
+      cpu: "-",
+      ramGB: "-",
+      gpu: "-",
+      dxVersion: "-",
+      storageGB: "-"
+    };
+  }
+
+  // Remove HTML tags and normalize line breaks
+  const text = html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .trim();
+
+  // If the text is basically empty after cleaning, return placeholders
+  if (!text || text === "Minimum:" || text === "Recommended:") {
+    return {
+      os: "-",
+      cpu: "-",
+      ramGB: "-",
+      gpu: "-",
+      dxVersion: "-",
+      storageGB: "-"
+    };
+  }
+
+  const lines = text
+    .split(/\n|\r/)
+    .map(l => l.trim())
+    .filter(Boolean);
+
   const req = {};
+
   lines.forEach(line => {
-    if (/^OS:/i.test(line)) req.os = line.replace(/^OS:/i, '').trim();
-    if (/^Processor:/i.test(line)) req.cpu = line.replace(/^Processor:/i, '').trim();
-    if (/^Memory:/i.test(line)) req.ramGB = line.replace(/^Memory:/i, '').replace(/GB.*$/, '').trim();
-    if (/^Graphics:/i.test(line)) req.gpu = line.replace(/^Graphics:/i, '').trim();
-    if (/^DirectX:/i.test(line)) req.dxVersion = line.replace(/^DirectX:/i, '').replace(/Version/i, '').trim();
-    if (/^Storage:/i.test(line)) req.storageGB = line.replace(/^Storage:/i, '').replace(/GB.*$/, '').trim();
+    if (/^OS:/i.test(line)) req.os = line.replace(/^OS:/i, "").trim();
+    if (/^Processor:/i.test(line)) req.cpu = line.replace(/^Processor:/i, "").trim();
+    if (/^Memory:/i.test(line))
+      req.ramGB = line.replace(/^Memory:/i, "").replace(/GB.*$/, "").trim();
+    if (/^Graphics:/i.test(line)) req.gpu = line.replace(/^Graphics:/i, "").trim();
+    if (/^DirectX:/i.test(line))
+      req.dxVersion = line.replace(/^DirectX:/i, "").replace(/Version/i, "").trim();
+    if (/^Storage:/i.test(line))
+      req.storageGB = line.replace(/^Storage:/i, "").replace(/GB.*$/, "").trim();
   });
+
   // Convert ramGB and storageGB to numbers if possible
-  if (req.ramGB) req.ramGB = Number(req.ramGB.replace(/[^\d.]/g, ""));
-  if (req.storageGB) req.storageGB = Number(req.storageGB.replace(/[^\d.]/g, ""));
+  if (req.ramGB && req.ramGB !== "-") {
+    req.ramGB = Number(req.ramGB.replace(/[^\d.]/g, ""));
+  }
+  if (req.storageGB && req.storageGB !== "-") {
+    req.storageGB = Number(req.storageGB.replace(/[^\d.]/g, ""));
+  }
+
+  // Ensure all expected fields exist, fallback to "-"
+  const fields = ["os", "cpu", "ramGB", "gpu", "dxVersion", "storageGB"];
+  fields.forEach(f => {
+    if (req[f] === undefined || req[f] === "") req[f] = "-";
+  });
+
   return req;
 }
+
 
 function ErrorPage({ error }) {
   return (

@@ -48,9 +48,23 @@ This cache reduces API calls and improves the offline experience.
 ### 🍎 macOS
 
 1. Go to the [Releases](https://github.com/melvnl/CanIRunThis.exe/releases).
-2. Download the `.dmg` or `.app` file for macOS (coming soon if not yet published).
+2. Download the `.dmg` or `.app` file for macOS.
 3. Drag the app into your `Applications` folder.
-4. If macOS blocks the app, go to:
+4. If macOS shows a message like:
+
+   > “Can I Run This.app is damaged and can’t be opened. You should move it to the Trash.”
+
+   Don’t worry — the app isn’t broken!
+   macOS Gatekeeper sometimes flags apps that aren’t notarized by Apple.
+
+   To fix it, open **Terminal** and run this command:
+
+   ```bash
+   xattr -cr /Applications/Can\ I\ Run\ This.app
+   ```
+
+   Then try opening the app again.
+   It should now launch normally 🎉
 
 ---
 
