@@ -1,9 +1,9 @@
 use std::fs;
-// use tauri::async_runtime::spawn;
 use regex::Regex;
 use sysinfo::{System, Disks};
 use std::process::Command;
-use serde_json::json;
+use serde_json::{json, Value};
+use tauri_plugin_http::reqwest;
 
 #[tauri::command]
 fn get_user_system_specs() -> serde_json::Value {
@@ -92,8 +92,8 @@ async fn fetch_and_cache_applist() -> Result<(), String> {
 }
 
 async fn read_cache() -> Result<serde_json::Value, String> {
-    let data = fs::read_to_string(CACHE_PATH).map_err(|e| e.to_string())?;
-    let json: serde_json::Value = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    let data = include_str!("../games_cache.json");
+    let json: Value = serde_json::from_str(data).map_err(|e| e.to_string())?;
     Ok(json)
 }
 
@@ -150,12 +150,6 @@ async fn update_game_cache_now() -> Result<(), String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-//   spawn(async move {
-//     loop {
-//       let _ = fetch_and_cache_applist().await;
-//       tokio::time::sleep(tokio::time::Duration::from_secs(60 * 60 * 24 * 90)).await; // 3 months
-//     }
-//   });
   tauri::Builder::default()
     .setup(|app| {
       if cfg!(debug_assertions) {
@@ -167,8 +161,8 @@ pub fn run() {
       }
       Ok(())
     })
-    .invoke_handler(tauri::generate_handler![get_user_system_specs, steam_app_details, search_local_game, update_game_cache_now])
     .plugin(tauri_plugin_http::init())
+    .invoke_handler(tauri::generate_handler![get_user_system_specs, steam_app_details, search_local_game, update_game_cache_now])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
