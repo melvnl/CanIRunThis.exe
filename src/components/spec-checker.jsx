@@ -144,7 +144,6 @@ export default function SpecChecker() {
       const osMap = {
         Windows_NT: "windows",
         Darwin: "mac",
-        Linux: "linux",
       }
       const userOsKey = osMap[userSpecs.os] || null
 
@@ -157,12 +156,12 @@ export default function SpecChecker() {
 
       // 🧩 Pick correct requirement section
       let osRequirements = null
-      if (userOsKey === "windows") {
-        osRequirements = details.pc_requirements
-      } else if (userOsKey === "mac") {
+
+      if (userOsKey === "mac") {
         osRequirements = details.mac_requirements
-      } else if (userOsKey === "linux") {
-        osRequirements = details.linux_requirements
+      }
+      else {
+        osRequirements = details.pc_requirements
       }
 
       if (osRequirements) {

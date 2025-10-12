@@ -86,11 +86,6 @@ function osMeets(userOS, minOS) {
     return has("darwin") || has("macos") ? "pass" : "fail";
   }
 
-  // ✅ Linux handling
-  if (minHas("linux") || has("linux")) {
-    return "pass"; // Most Linux distros aren't version-gated in Steam requirements
-  }
-
   // fallback generic match
   return u.includes(m) ? "pass" : "unknown";
 }
