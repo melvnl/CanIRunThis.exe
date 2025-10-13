@@ -6,6 +6,7 @@ import { Input } from "./input"
 import { SimpleCard } from "./card"
 import { Button } from "./button"
 import { invoke } from '@tauri-apps/api/core';
+import { open } from "@tauri-apps/plugin-shell";
 
 function parseRequirements(html) {
   if (!html) {
@@ -284,6 +285,17 @@ export default function SpecChecker() {
           )}
         </>
       )}
+
+      {/* Footer */}
+      <footer className="pt-10 text-center text-sm text-gray-500">
+        Built with ☕ by{" "}
+        <button
+          onClick={() => open("https://melvinliu.com")}
+          className="text-blue-600 underline cursor-pointer hover:text-blue-800"
+        >
+          Melvin Liu
+        </button>
+      </footer>
     </section>
   )
 }

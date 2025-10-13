@@ -5,6 +5,13 @@ It helps users check whether their computer can run specific games available on 
 
 ---
 
+# ⚠️ Disclaimer
+
+This is a fun and experimental pet project I built to fill my void as an engineer — that constant urge to create something that might be useful for me or others.
+Please note that some information, especially related to Windows CPU and GPU comparisons, may not always be 100% accurate.
+However, details regarding minimum and recommended system requirements are generally correct, as they’re sourced directly from Steam.
+If you find any inaccuracies or have ideas for improvement, feel free to open an issue or submit a pull request — I’ll be more than happy to review and enhance the project together.
+
 ## 🚀 Overview
 
 This app provides a fast and intuitive way for gamers to:

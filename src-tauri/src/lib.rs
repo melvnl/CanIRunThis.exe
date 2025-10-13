@@ -30,7 +30,6 @@ fn get_user_system_specs() -> serde_json::Value {
             d.mount_point() == std::path::Path::new("C:\\")
         }
     }) {
-        let total_gb = main_disk.total_space() as f64 / 1_000_000_000.0;
         total_storage_gb = main_disk.available_space() as f64 / 1_000_000_000.0;
     }
 
@@ -173,6 +172,7 @@ pub fn run() {
       Ok(())
     })
     .plugin(tauri_plugin_http::init())
+    .plugin(tauri_plugin_shell::init())
     .invoke_handler(tauri::generate_handler![get_user_system_specs, steam_app_details, search_local_game, update_game_cache_now])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
