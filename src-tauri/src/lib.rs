@@ -15,13 +15,24 @@ fn get_user_system_specs() -> serde_json::Value {
     let cpu_count = sys.cpus().len();
 
     // RAM
-    let total_ram_gb = sys.total_memory() / 1024 / 1024 / 1024;
+    let total_ram_gb = sys.total_memory() as f64 / 1024.0_f64.powi(3);
 
     // Storage (sum of all disks)
     let disks = Disks::new_with_refreshed_list();
-    let total_storage_gb: u64 = disks.iter()
-        .map(|d| d.total_space())
-        .sum::<u64>() / 1_000_000_000;
+    let mut total_storage_gb: f64 = 0.0;
+    if let Some(main_disk) = disks.iter().find(|d| {
+        #[cfg(target_os = "macos")]
+        {
+            d.mount_point() == std::path::Path::new("/")
+        }
+        #[cfg(target_os = "windows")]
+        {
+            d.mount_point() == std::path::Path::new("C:\\")
+        }
+    }) {
+        let total_gb = main_disk.total_space() as f64 / 1_000_000_000.0;
+        total_storage_gb = main_disk.available_space() as f64 / 1_000_000_000.0;
+    }
 
     // GPU (platform-specific)
     #[cfg(target_os = "windows")]
@@ -60,7 +71,7 @@ fn get_user_system_specs() -> serde_json::Value {
         "cpu_brand": cpu_brand,
         "cpu_count": cpu_count,
         "gpu": gpu_name,
-        "total_storage_gb": total_storage_gb,
+        "total_storage_gb": total_storage_gb.floor() as u64,
         "total_ram_gb": total_ram_gb,
     })
 }
