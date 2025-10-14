@@ -15,7 +15,7 @@ fn get_user_system_specs() -> serde_json::Value {
     let cpu_count = sys.cpus().len();
 
     // RAM
-    let total_ram_gb = sys.total_memory() as f64 / 1024.0_f64.powi(3);
+    let total_ram_gb = (sys.total_memory() as f64 / 1024.0_f64.powi(3)).round();
 
     // Storage (sum of all disks)
     let disks = Disks::new_with_refreshed_list();
