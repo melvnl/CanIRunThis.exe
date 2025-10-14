@@ -98,6 +98,7 @@ export default function SpecChecker() {
     ramGB: null,
     storageGB: null,
     os: null,
+    osVersion: null,
     dxVersion: "12",
   });
 
@@ -199,6 +200,7 @@ export default function SpecChecker() {
           ramGB: specs.total_ram_gb ?? null,
           storageGB: specs.total_storage_gb ?? null,
           os: specs.os ?? null,
+          osVersion: specs.os_version ?? null,
           dxVersion: "12", // placeholder
         });
       } catch (err) {

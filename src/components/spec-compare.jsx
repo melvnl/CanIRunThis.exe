@@ -34,60 +34,33 @@ function dxMeets(userDx, minDx) {
   return u >= m ? "pass" : "fail";
 }
 
-function osMeets(userOS, minOS) {
-  if (!userOS || !minOS) return "unknown";
-  const u = userOS.toLowerCase();
-  const m = minOS.toLowerCase();
+function osMeets(userOS, userOSversion, minOS) {
+  if (!userOS || !userOSversion || !minOS) return "unknown";
+
+  const normalize = (s) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const u = normalize(userOS);
+  const m = normalize(minOS.replace("or newer", "").replace("64-bit", "").trim());
   const has = (kw) => u.includes(kw);
   const minHas = (kw) => m.includes(kw);
 
   // ✅ Windows handling
-  if (minHas("windows 10/11")) {
-    return has("windows 10") || has("windows 11") ? "pass" : "fail";
-  }
-  if (minHas("windows 11")) {
-    return has("windows 11") ? "pass" : "fail";
-  }
-  if (minHas("windows 10")) {
-    return has("windows 10") || has("windows 11") ? "pass" : "fail";
-  }
-  if (minHas("windows 7") || minHas("windows 8")) {
-    return has("windows") ? "pass" : "fail";
+  if (minHas("windows")) {
+    const version = parseFloat(userOSversion);
+    const match = m.match(/windows\s*(\d+(\.\d+)?)/);
+    const minVersion = match ? parseFloat(match[1]) : 0;
+    return version >= minVersion ? "pass" : "fail";
   }
 
-  // ✅ macOS handling
-  if (minHas("macos")) {
-    // Extract version number from string, e.g. "macOS 12 or newer" → 12
+  // ✅ macOS or Darwin handling
+  if (minHas("macos") || has("darwin")) {
+    const version = parseFloat(userOSversion);
     const match = m.match(/macos\s*(\d+(\.\d+)?)/);
-    const minVersion = match ? parseFloat(match[1]) : null;
-
-    // macOS internal Darwin mapping (approximate)
-    const darwinToMac = {
-      23: 14, // macOS 14 Sonoma
-      22: 13, // macOS 13 Ventura
-      21: 12, // macOS 12 Monterey
-      20: 11, // macOS 11 Big Sur
-      19: 10.15, // macOS Catalina
-      18: 10.14, // Mojave
-      17: 10.13, // High Sierra
-      16: 10.12, // Sierra
-    };
-
-    // Extract Darwin version if possible (e.g. "Darwin 23.5.0" → 23)
-    const darwinMatch = u.match(/darwin\s*(\d+)/);
-    const userDarwin = darwinMatch ? parseInt(darwinMatch[1]) : null;
-    const userMacVersion = userDarwin ? darwinToMac[userDarwin] : null;
-
-    if (userMacVersion && minVersion) {
-      return userMacVersion >= minVersion ? "pass" : "fail";
-    }
-
-    // fallback
-    return has("darwin") || has("macos") ? "pass" : "fail";
+    const minVersion = match ? parseFloat(match[1]) : 0;
+    return version >= minVersion ? "pass" : "fail";
   }
 
-  // fallback generic match
-  return u.includes(m) ? "pass" : "unknown";
+  // fallback
+  return "unknown";
 }
 
 function modelMeets(userOs, type, userVal, minVal) {
@@ -192,7 +165,7 @@ export default function SpecCompare({ user, minimum, recommended, gameTitle, thu
   const gpuStatus = modelMeets(user.os, 'gpu', user.gpu, minimum.gpu)
   const ramStatus = numericMeets(`${user.ramGB}`, `${minimum.ramGB}`)
   const storageStatus = numericMeets(`${user.storageGB}`, `${minimum.storageGB}`)
-  const osStatus = osMeets(user.os, minimum.os)
+  const osStatus = osMeets(user.os, user.osVersion, minimum.os)
   const dxStatus = dxMeets(user.dxVersion, minimum.dxVersion)
 
   return (
@@ -271,7 +244,13 @@ export default function SpecCompare({ user, minimum, recommended, gameTitle, thu
             rec={`${recommended.storageGB} GB`}
             status={storageStatus}
           />
-          <Row label="OS" user={user.os} min={minimum.os} rec={recommended.os} status={osStatus} />
+          <Row
+            label="OS"
+            user={`${user.os === "Darwin" ? "macOS" : user.os} ${user.osVersion}`}
+            min={minimum.os}
+            rec={recommended.os}
+            status={osStatus}
+          />
           <Row
             label="DirectX"
             user={user.dxVersion}

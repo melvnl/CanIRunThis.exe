@@ -66,7 +66,6 @@ fn get_user_system_specs() -> serde_json::Value {
     json!({
         "os": System::name(),
         "os_version": System::os_version(),
-        "hostname": System::host_name(),
         "cpu_brand": cpu_brand,
         "cpu_count": cpu_count,
         "gpu": gpu_name,
