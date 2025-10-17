@@ -46,8 +46,9 @@ This cache reduces API calls and improves the offline experience.
 ### 🪟 Windows
 
 1. Go to the [Releases](https://github.com/melvnl/CanIRunThis.exe/releases) page.
-2. Download the latest file ending with:
-3. Run the installer — Windows may ask for confirmation since this is an unsigned app.
+2. Download the latest file ending with `.exe`.
+3. Run the installer — Windows may show a warning since this is an unsigned app.
+   - If you see a **"Windows protected your PC"** message, click **“More info” → “Run anyway.”**
 4. Once installed, you can launch **Can I Run This** from your Start Menu or Desktop.
 
 ---
